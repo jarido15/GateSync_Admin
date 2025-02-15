@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase";
 import { AiOutlineEdit, AiOutlineDelete, AiOutlineEye } from "react-icons/ai";
 
@@ -7,30 +7,30 @@ const StudentTable = () => {
   const [students, setStudents] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [setIsViewModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [deletingStudent, setDeletingStudent] = useState(null);
-//   const [viewingStudent, setViewingStudent] = useState(null);
+  const [viewingStudent, setViewingStudent] = useState(null);
   const [updatedData, setUpdatedData] = useState({ username: "", idNumber: "", uid: "", course: "", yearLevel: "" });
 
   useEffect(() => {
-    const fetchStudents = async () => {
-      const querySnapshot = await getDocs(collection(db, "students"));
-      const studentData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setStudents(studentData);
-    };
+    // Listen for real-time changes in the "students" collection
+    const unsubscribe = onSnapshot(collection(db, "students"), (snapshot) => {
+      const studentList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setStudents(studentList);
+    });
 
-    fetchStudents();
+    return () => unsubscribe(); // Cleanup on unmount
   }, []);
 
   const handleEdit = (student) => {
     setEditingStudent(student);
-    setUpdatedData({ 
-      username: student.username || "", 
-      idNumber: student.idNumber || "", 
+    setUpdatedData({
+      username: student.username || "",
+      idNumber: student.idNumber || "",
       uid: student.uid || "",
       course: student.course || "",
-      yearLevel: student.yearLevel || ""
+      yearLevel: student.yearLevel || "",
     });
     setIsEditModalOpen(true);
   };
@@ -38,7 +38,6 @@ const StudentTable = () => {
   const handleSave = async () => {
     if (!editingStudent) return;
     await updateDoc(doc(db, "students", editingStudent.id), updatedData);
-    setStudents(students.map((s) => (s.id === editingStudent.id ? { ...s, ...updatedData } : s)));
     setIsEditModalOpen(false);
   };
 
@@ -50,7 +49,6 @@ const StudentTable = () => {
   const handleDeleteConfirm = async () => {
     if (!deletingStudent) return;
     await deleteDoc(doc(db, "students", deletingStudent.id));
-    setStudents(students.filter((s) => s.id !== deletingStudent.id));
     setIsDeleteModalOpen(false);
   };
 
@@ -78,7 +76,13 @@ const StudentTable = () => {
                 <td className="py-4 px-6 text-center">{student.yearLevel || "N/A"}</td>
                 <td className="py-4 px-6 text-center">{student.idNumber || "N/A"}</td>
                 <td className="py-4 px-6 flex justify-center space-x-4">
-                  <button className="text-blue-500 hover:text-blue-700" onClick={() => setIsViewModalOpen(true)}>
+                  <button
+                    className="text-blue-500 hover:text-blue-700"
+                    onClick={() => {
+                      setViewingStudent(student);
+                      setIsViewModalOpen(true);
+                    }}
+                  >
                     <AiOutlineEye size={22} />
                   </button>
                   <button className="text-yellow-500 hover:text-yellow-700" onClick={() => handleEdit(student)}>
