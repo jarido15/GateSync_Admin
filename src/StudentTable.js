@@ -14,13 +14,12 @@ const StudentTable = () => {
   const [updatedData, setUpdatedData] = useState({ username: "", idNumber: "", uid: "", course: "", yearLevel: "" });
 
   useEffect(() => {
-    // Listen for real-time changes in the "students" collection
     const unsubscribe = onSnapshot(collection(db, "students"), (snapshot) => {
       const studentList = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setStudents(studentList);
     });
 
-    return () => unsubscribe(); // Cleanup on unmount
+    return () => unsubscribe();
   }, []);
 
   const handleEdit = (student) => {
@@ -125,6 +124,21 @@ const StudentTable = () => {
               <button className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500" onClick={() => setIsDeleteModalOpen(false)}>Cancel</button>
               <button className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700" onClick={handleDeleteConfirm}>Delete</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Modal */}
+      {isViewModalOpen && viewingStudent && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg w-96">
+            <h2 className="text-xl font-semibold mb-4">Student Details</h2>
+            <p className="mb-2"><strong>Name:</strong> {viewingStudent.username || "N/A"}</p>
+            <p className="mb-2"><strong>ID Number:</strong> {viewingStudent.idNumber || "N/A"}</p>
+            <p className="mb-2"><strong>UID:</strong> {viewingStudent.uid || "N/A"}</p>
+            <p className="mb-2"><strong>Course:</strong> {viewingStudent.course || "N/A"}</p>
+            <p className="mb-2"><strong>Year Level:</strong> {viewingStudent.yearLevel || "N/A"}</p>
+            <button className="bg-gray-500 text-white px-4 py-2 rounded mt-4" onClick={() => setIsViewModalOpen(false)}>Close</button>
           </div>
         </div>
       )}
