@@ -53,8 +53,8 @@ const Schedules = () => {
             <th className="py-4 px-6">Course</th>
             <th className="py-4 px-6">Year Level</th>
             <th className="py-4 px-6">Date</th>
-            <th className="py-4 px-6">Time In</th>
-            <th className="py-4 px-6">Time Out</th>
+            <th className="py-4 px-6">Class Start</th>
+            <th className="py-4 px-6">Class End</th>
           </tr>
         </thead>
         <tbody>

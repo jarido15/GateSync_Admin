@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, deleteDoc, doc, updateDoc, onSnapshot } from "firebase/firestore";
+import { collection, deleteDoc, doc, updateDoc, onSnapshot, getDocs, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import { AiOutlineEdit, AiOutlineDelete, AiOutlineEye } from "react-icons/ai";
 
@@ -47,8 +47,26 @@ const StudentTable = () => {
 
   const handleDeleteConfirm = async () => {
     if (!deletingStudent) return;
-    await deleteDoc(doc(db, "students", deletingStudent.id));
-    setIsDeleteModalOpen(false);
+
+    try {
+      // Step 1: Find matching Emergency document(s) by uid
+      const emergencyQuery = query(collection(db, "Emergency"), where("uid", "==", deletingStudent.uid));
+      const emergencySnapshot = await getDocs(emergencyQuery);
+
+      // Step 2: Delete related Emergency document(s)
+      const deletePromises = emergencySnapshot.docs.map((emergencyDoc) =>
+        deleteDoc(doc(db, "Emergency", emergencyDoc.id))
+      );
+      await Promise.all(deletePromises);
+
+      // Step 3: Delete the Student document
+      await deleteDoc(doc(db, "students", deletingStudent.id));
+
+      // Close modal after deletion
+      setIsDeleteModalOpen(false);
+    } catch (error) {
+      console.error("Error deleting student or emergency record:", error);
+    }
   };
 
   return (
@@ -103,9 +121,6 @@ const StudentTable = () => {
           <div className="bg-white p-6 rounded-lg w-96">
             <h2 className="text-xl font-semibold mb-4">Edit Student</h2>
             <input type="text" className="w-full p-2 border rounded mb-4" value={updatedData.username} onChange={(e) => setUpdatedData({ ...updatedData, username: e.target.value })} />
-            <input type="text" className="w-full p-2 border rounded mb-4" value={updatedData.course} onChange={(e) => setUpdatedData({ ...updatedData, course: e.target.value })} />
-            <input type="text" className="w-full p-2 border rounded mb-4" value={updatedData.yearLevel} onChange={(e) => setUpdatedData({ ...updatedData, yearLevel: e.target.value })} />
-            <input type="text" className="w-full p-2 border rounded mb-4" value={updatedData.idNumber} onChange={(e) => setUpdatedData({ ...updatedData, idNumber: e.target.value })} />
             <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={handleSave}>Save</button>
             <button className="bg-gray-400 text-white px-4 py-2 rounded ml-2" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
           </div>
@@ -120,10 +135,8 @@ const StudentTable = () => {
             <p className="text-gray-700 mb-4">
               Are you sure you want to delete <strong>{deletingStudent?.username}</strong>?
             </p>
-            <div className="flex justify-between">
-              <button className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500" onClick={() => setIsDeleteModalOpen(false)}>Cancel</button>
-              <button className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700" onClick={handleDeleteConfirm}>Delete</button>
-            </div>
+            <button className="bg-gray-400 text-white px-4 py-2 rounded" onClick={() => setIsDeleteModalOpen(false)}>Cancel</button>
+            <button className="bg-red-600 text-white px-4 py-2 rounded ml-2" onClick={handleDeleteConfirm}>Delete</button>
           </div>
         </div>
       )}
@@ -133,11 +146,7 @@ const StudentTable = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-lg w-96">
             <h2 className="text-xl font-semibold mb-4">Student Details</h2>
-            <p className="mb-2"><strong>Name:</strong> {viewingStudent.username || "N/A"}</p>
-            <p className="mb-2"><strong>ID Number:</strong> {viewingStudent.idNumber || "N/A"}</p>
-            <p className="mb-2"><strong>UID:</strong> {viewingStudent.uid || "N/A"}</p>
-            <p className="mb-2"><strong>Course:</strong> {viewingStudent.course || "N/A"}</p>
-            <p className="mb-2"><strong>Year Level:</strong> {viewingStudent.yearLevel || "N/A"}</p>
+            <p className="mb-2"><strong>Name:</strong> {viewingStudent.username}</p>
             <button className="bg-gray-500 text-white px-4 py-2 rounded mt-4" onClick={() => setIsViewModalOpen(false)}>Close</button>
           </div>
         </div>
