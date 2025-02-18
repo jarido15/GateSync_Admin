@@ -86,7 +86,7 @@ const Notifications = () => {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-3xl font-bold mb-6 text-gray-800">🚨 Emergency Requests</h2>
+      <h2 className="text-3xl font-bold mb-6 text-gray-800">Notifications</h2>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-semibold text-gray-700">
           Pending Emergencies: {pendingCount}
