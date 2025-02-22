@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 
-const Login = () => {
+const Login = ({ onLogin }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -15,16 +15,17 @@ const Login = () => {
     setLoading(true);
     setError("");
 
-    // Static credentials for admin login
+    // Static admin credentials
     setTimeout(() => {
       if (email === "admin@gmail.com" && password === "Admin123") {
         setLoading(false);
+        onLogin({ email });
         navigate("/dashboard");
       } else {
         setError("Invalid credentials.");
         setLoading(false);
       }
-    }, 1500); // Simulating a loading delay
+    }, 1500); // Simulate loading delay
   };
 
   return (
@@ -59,7 +60,7 @@ const Login = () => {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-3 flex items-center text-gray-500"
             >
-              {showPassword ?  <AiOutlineEye className="h-5 w-5" />  : <AiOutlineEyeInvisible className="h-5 w-5" />}
+              {showPassword ? <AiOutlineEye className="h-5 w-5" /> : <AiOutlineEyeInvisible className="h-5 w-5" />}
             </button>
           </div>
           <button
@@ -67,7 +68,11 @@ const Login = () => {
             className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center font-semibold"
             disabled={loading}
           >
-            {loading ? <span className="animate-spin h-5 w-5 border-4 border-white border-t-transparent rounded-full"></span> : "Login"}
+            {loading ? (
+              <span className="animate-spin h-5 w-5 border-4 border-white border-t-transparent rounded-full"></span>
+            ) : (
+              "Login"
+            )}
           </button>
         </form>
       </div>
