@@ -6,24 +6,44 @@ import { useNavigate } from "react-router-dom";
 import { getAuth, signOut } from "firebase/auth";
 
 const Sidebar = ({ setActivePage }) => {
-  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0); // Initializing state for pending count
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
   const auth = getAuth();
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
+    // Combine counts of "Emergency" and "scanned_ids" collections
+    let emergencyCount = 0;
+    let scannedCount = 0;
+
+    const unsubscribeEmergencies = onSnapshot(
       query(collection(db, "Emergency"), where("status", "==", "Pending")),
       (querySnapshot) => {
-        setPendingCount(querySnapshot.size);
+        emergencyCount = querySnapshot.size;
+        setPendingCount(emergencyCount + scannedCount); // Update the count
       },
       (error) => {
-        console.error("Error fetching pending requests: ", error);
+        console.error("Error fetching pending requests from Emergency collection: ", error);
       }
     );
 
-    return () => unsubscribe();
-  }, []);
+    const unsubscribeScannedIds = onSnapshot(
+      query(collection(db, "scanned_ids"), where("status", "==", "Pending")),
+      (querySnapshot) => {
+        scannedCount = querySnapshot.size;
+        setPendingCount(emergencyCount + scannedCount); // Update the count
+      },
+      (error) => {
+        console.error("Error fetching pending requests from scanned_ids collection: ", error);
+      }
+    );
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribeEmergencies();
+      unsubscribeScannedIds();
+    };
+  }, []); // Empty dependency array to run the effect only once
 
   const handleLogout = async () => {
     try {
@@ -38,13 +58,13 @@ const Sidebar = ({ setActivePage }) => {
     <div className="h-screen w-64 bg-blue-900 text-white flex flex-col py-6 px-4 shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-center">Admin Panel</h2>
       <ul className="space-y-4">
-      <li
-  className="flex items-center space-x-3 p-3 hover:bg-blue-700 cursor-pointer transition"
-  onClick={() => setActivePage("students")}
->
-  <AiOutlineDashboard size={22} />
-  <span>Dashboard</span>
-</li>
+        <li
+          className="flex items-center space-x-3 p-3 hover:bg-blue-700 cursor-pointer transition"
+          onClick={() => setActivePage("students")}
+        >
+          <AiOutlineDashboard size={22} />
+          <span>Dashboard</span>
+        </li>
         <li
           className="flex items-center space-x-3 p-3 hover:bg-blue-700 cursor-pointer transition"
           onClick={() => setActivePage("schedules")}
@@ -78,8 +98,18 @@ const Sidebar = ({ setActivePage }) => {
           <div className="bg-white p-6 rounded-lg shadow-lg text-black">
             <p className="mb-4">Are you sure you want to log out?</p>
             <div className="flex justify-end space-x-4">
-              <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={() => setShowLogoutModal(false)}>Cancel</button>
-              <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={handleLogout}>Logout</button>
+              <button
+                className="bg-gray-500 text-white px-4 py-2 rounded"
+                onClick={() => setShowLogoutModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-red-500 text-white px-4 py-2 rounded"
+                onClick={handleLogout}
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
