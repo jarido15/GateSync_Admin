@@ -94,10 +94,10 @@ const Notifications = () => {
   }, [studentsMap, emergencies]); // Re-run when studentsMap or emergencies updates
 
   // Open modal with selected emergency details
-  const handleOpenModal = (emergency) => {
-    setSelectedEmergency(emergency);
-    setIsModalOpen(true);
-  };
+  // const handleOpenModal = (emergency) => {
+  //   setSelectedEmergency(emergency);
+  //   setIsModalOpen(true);
+  // };
 
   // Close modal
   const handleCloseModal = () => {
@@ -106,58 +106,59 @@ const Notifications = () => {
     setSelectedScannedEntry(null); // Add this line to clear selectedScannedEntry when modal closes
   };
 
-  // Update Emergency Request Status (Approve/Deny)
-  const handleUpdateStatus = async (status) => {
-    if (selectedEmergency) {
-      try {
-        const emergencyRef = doc(db, "Emergency", selectedEmergency.id);
-        await updateDoc(emergencyRef, { status });
+// Open modal and update Emergency status to "In Progress"
+const handleOpenModal = async (emergency) => {
+  if (emergency.status === "Pending") {
+    try {
+      const emergencyRef = doc(db, "Emergency", emergency.id);
+      await updateDoc(emergencyRef, { status: "In Progress" });
 
-        setEmergencies((prev) =>
-          prev.map((emergency) =>
-            emergency.id === selectedEmergency.id ? { ...emergency, status } : emergency
-          )
-        );
-
-        handleCloseModal();
-      } catch (error) {
-        console.error(`Error updating emergency request to ${status}:`, error);
-      }
+      setEmergencies((prev) =>
+        prev.map((e) =>
+          e.id === emergency.id ? { ...e, status: "In Progress" } : e
+        )
+      );
+    } catch (error) {
+      console.error("Error updating emergency status to In Progress:", error);
     }
-  };
+  }
+  setSelectedEmergency(emergency);
+  setIsModalOpen(true);
+};
 
-  // Update Scanned Entry Status (Approve/Deny)
-  const handleUpdateScannedStatus = async (status) => {
-    if (selectedScannedEntry) {
-      try {
-        const scannedRef = doc(db, "scanned_ids", selectedScannedEntry.id);
-        await updateDoc(scannedRef, { status });
+// Open modal and update Scanned Entry status to "In Progress"
+const handleOpenScannedModal = async (entry) => {
+  if (entry.status === "Pending") {
+    try {
+      const scannedRef = doc(db, "scanned_ids", entry.id);
+      await updateDoc(scannedRef, { status: "In Progress" });
 
-        setScannedEntries((prev) =>
-          prev.map((entry) =>
-            entry.id === selectedScannedEntry.id ? { ...entry, status } : entry
-          )
-        );
-
-        handleCloseModal();
-      } catch (error) {
-        console.error(`Error updating scanned entry request to ${status}:`, error);
-      }
+      setScannedEntries((prev) =>
+        prev.map((e) =>
+          e.id === entry.id ? { ...e, status: "In Progress" } : e
+        )
+      );
+    } catch (error) {
+      console.error("Error updating scanned entry status to In Progress:", error);
     }
-  };
+  }
+  setSelectedScannedEntry(entry);
+  setIsModalOpen(true);
+};
 
-  // Open modal for scanned entry details
-  const handleOpenScannedModal = (entry) => {
-    setSelectedScannedEntry(entry);
-    setIsModalOpen(true);
-  };
+
+  // // Open modal for scanned entry details
+  // const handleOpenScannedModal = (entry) => {
+  //   setSelectedScannedEntry(entry);
+  //   setIsModalOpen(true);
+  // };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <h2 className="text-3xl font-bold mb-6 text-gray-800">Notifications</h2>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-semibold text-gray-700">
-          Pending Emergencies and Scanned Entries: {pendingCount}
+          Emergencies and Scanned Entries: {pendingCount}
         </h3>
       </div>
 
@@ -180,17 +181,6 @@ const Notifications = () => {
               <p className="text-sm text-gray-500">
               <strong>Scan Time:</strong> {emergency.timestamp ? new Date(emergency.timestamp.toDate()).toLocaleString() : "No timestamp"}
               </p>
-              <span
-                className={`inline-block px-3 py-1 text-sm font-medium mt-3 rounded ${
-                  emergency.status === "Approved"
-                    ? "bg-green-500 text-white"
-                    : emergency.status === "Denied"
-                    ? "bg-red-500 text-white"
-                    : "bg-yellow-400 text-gray-800"
-                }`}
-              >
-                {emergency.status || "Pending"}
-              </span>
             </div>
           ))
         ) : (
@@ -227,17 +217,6 @@ const Notifications = () => {
               <p className="text-sm text-gray-500">
               <strong>Scan Time:</strong> {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : "No timestamp"}
               </p>
-              <span
-                className={`inline-block px-3 py-1 text-sm font-medium mt-3 rounded ${
-                  entry.status === "Approved"
-                    ? "bg-green-500 text-white"
-                    : entry.status === "Denied"
-                    ? "bg-red-500 text-white"
-                    : "bg-yellow-400 text-gray-800"
-                }`}
-              >
-                {entry.status || "Pending"}
-              </span>
             </div>
           ))
         ) : (
@@ -265,21 +244,9 @@ const Notifications = () => {
                 : "No timestamp"}
             </p>
 
-            <div className="flex justify-between mt-6">
+            <div className="flex justify-center mt-6">
               <button
-                className="px-5 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg shadow-md transition"
-                onClick={() => handleUpdateStatus("Approved")}
-              >
-                ✅ Approve
-              </button>
-              <button
-                className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg shadow-md transition"
-                onClick={() => handleUpdateStatus("Denied")}
-              >
-                ❌ Deny
-              </button>
-              <button
-                className="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white font-medium rounded-lg shadow-md transition"
+                className="px-4 py-2 bg-red-400 hover:bg-red-500 text-white font-medium rounded-lg shadow-md transition"
                 onClick={handleCloseModal}
               >
                 🔙 Close
@@ -315,26 +282,15 @@ const Notifications = () => {
                 : "No timestamp"}
             </p>
 
-            <div className="flex justify-between mt-6">
-              <button
-                className="px-5 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg shadow-md transition"
-                onClick={() => handleUpdateScannedStatus("Approved")}
-              >
-                ✅ Approve
-              </button>
-              <button
-                className="px-5 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg shadow-md transition"
-                onClick={() => handleUpdateScannedStatus("Denied")}
-              >
-                ❌ Deny
-              </button>
-              <button
-                className="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white font-medium rounded-lg shadow-md transition"
-                onClick={handleCloseModal}
-              >
-                🔙 Close
-              </button>
-            </div>
+         <div className="flex justify-center mt-6">
+            <button
+              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg shadow-md transition"
+              onClick={handleCloseModal}
+            >
+              🔙 Close
+            </button>
+          </div>
+
           </div>
         </div>
       )}
