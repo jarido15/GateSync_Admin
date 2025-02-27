@@ -47,25 +47,58 @@ const StudentTable = () => {
 
   const handleDeleteConfirm = async () => {
     if (!deletingStudent) return;
-
+  
     try {
-      // Step 1: Find matching Emergency document(s) by uid
+      const studentRef = doc(db, "students", deletingStudent.id);
+      const linkedParentRef = collection(studentRef, "LinkedParent");
+  
+      // Step 1: Delete all LinkedParent documents
+      const linkedParentSnapshot = await getDocs(linkedParentRef);
+      if (!linkedParentSnapshot.empty) {
+        const deleteLinkedParentPromises = linkedParentSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+        await Promise.all(deleteLinkedParentPromises);
+      }
+  
+      // Step 2: Delete related Emergency documents
       const emergencyQuery = query(collection(db, "Emergency"), where("uid", "==", deletingStudent.uid));
       const emergencySnapshot = await getDocs(emergencyQuery);
-
-      // Step 2: Delete related Emergency document(s)
-      const deletePromises = emergencySnapshot.docs.map((emergencyDoc) =>
-        deleteDoc(doc(db, "Emergency", emergencyDoc.id))
-      );
-      await Promise.all(deletePromises);
-
-      // Step 3: Delete the Student document
-      await deleteDoc(doc(db, "students", deletingStudent.id));
-
+  
+      if (!emergencySnapshot.empty) {
+        const deleteEmergencyPromises = emergencySnapshot.docs.map((emergencyDoc) =>
+          deleteDoc(doc(db, "Emergency", emergencyDoc.id))
+        );
+        await Promise.all(deleteEmergencyPromises);
+      }
+  
+      // Step 3: Find and delete matching LinkedStudent documents inside parents
+      const parentsQuery = collection(db, "parent");
+      const parentsSnapshot = await getDocs(parentsQuery);
+  
+      if (!parentsSnapshot.empty) {
+        const deleteLinkedStudentPromises = [];
+  
+        for (const parentDoc of parentsSnapshot.docs) {
+          const linkedStudentRef = collection(parentDoc.ref, "LinkedStudent");
+          const linkedStudentQuery = query(linkedStudentRef, where("uid", "==", deletingStudent.uid));
+          const linkedStudentSnapshot = await getDocs(linkedStudentQuery);
+  
+          if (!linkedStudentSnapshot.empty) {
+            linkedStudentSnapshot.docs.forEach((linkedStudentDoc) => {
+              deleteLinkedStudentPromises.push(deleteDoc(linkedStudentDoc.ref));
+            });
+          }
+        }
+  
+        await Promise.all(deleteLinkedStudentPromises);
+      }
+  
+      // Step 4: Delete the Student document
+      await deleteDoc(studentRef);
+  
       // Close modal after deletion
       setIsDeleteModalOpen(false);
     } catch (error) {
-      console.error("Error deleting student or emergency record:", error);
+      console.error("Error deleting student, emergency records, LinkedParent, or LinkedStudent:", error);
     }
   };
 
@@ -121,6 +154,10 @@ const StudentTable = () => {
           <div className="bg-white p-6 rounded-lg w-96">
             <h2 className="text-xl font-semibold mb-4">Edit Student</h2>
             <input type="text" className="w-full p-2 border rounded mb-4" value={updatedData.username} onChange={(e) => setUpdatedData({ ...updatedData, username: e.target.value })} />
+            <input type="text" className="w-full p-2 border rounded mb-4" value={updatedData.course} onChange={(e) => setUpdatedData({ ...updatedData, course: e.target.value })} />
+            <input type="text" className="w-full p-2 border rounded mb-4" value={updatedData.yearLevel} onChange={(e) => setUpdatedData({ ...updatedData, yearLevel: e.target.value })} />
+            <input type="text" className="w-full p-2 border rounded mb-4" value={updatedData.idNumber} onChange={(e) => setUpdatedData({ ...updatedData, idNumber: e.target.value })} />
+
             <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={handleSave}>Save</button>
             <button className="bg-gray-400 text-white px-4 py-2 rounded ml-2" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
           </div>
@@ -147,6 +184,9 @@ const StudentTable = () => {
           <div className="bg-white p-6 rounded-lg w-96">
             <h2 className="text-xl font-semibold mb-4">Student Details</h2>
             <p className="mb-2"><strong>Name:</strong> {viewingStudent.username}</p>
+            <p className="mb-2"><strong>ID Number:</strong> {viewingStudent.idNumber}</p>
+            <p className="mb-2"><strong>Course:</strong> {viewingStudent.course}</p>
+            <p className="mb-2"><strong>Year Level:</strong> {viewingStudent.yearLevel}</p>
             <button className="bg-gray-500 text-white px-4 py-2 rounded mt-4" onClick={() => setIsViewModalOpen(false)}>Close</button>
           </div>
         </div>
